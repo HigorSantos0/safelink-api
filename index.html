@@ -527,7 +527,7 @@
       btn.disabled = true;
 
       try {
-        const res = await fetch('http://localhost:8000/analyze', {
+        const res = await fetch('https://safelink-api-production.up.railway.app', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url })
