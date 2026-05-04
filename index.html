@@ -1,596 +1,217 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SafeLink — Verificador de URLs</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <title>SafeLink — URL Threat Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --border: #1e1e2e;
-      --text: #e8e8f0;
-      --muted: #5a5a7a;
-      --accent: #7c6aff;
-      --accent-glow: rgba(124, 106, 255, 0.25);
-      --green: #2ecc8f;
-      --green-glow: rgba(46, 204, 143, 0.2);
-      --yellow: #f5c542;
-      --yellow-glow: rgba(245, 197, 66, 0.2);
-      --red: #ff5e6c;
-      --red-glow: rgba(255, 94, 108, 0.2);
+      --bg: #010a01; --green: #00ff41; --green-dim: #00c032;
+      --green-dark: #003a10; --green-glow: rgba(0,255,65,0.15);
+      --green-glow-strong: rgba(0,255,65,0.35); --red: #ff2244;
+      --yellow: #f0e040; --text: #ccffcc; --muted: #2a6b2a;
+      --border: #0a3a0a; --font-mono: 'Share Tech Mono', monospace;
+      --font-display: 'Orbitron', monospace;
     }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      overflow-x: hidden;
-    }
-
-    /* Background grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Glow blob */
-    body::after {
-      content: '';
-      position: fixed;
-      top: -20%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(124,106,255,0.08) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .container {
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      max-width: 640px;
-    }
-
-    /* Header */
-    .header {
-      text-align: center;
-      margin-bottom: 3rem;
-      animation: fadeDown 0.6s ease both;
-    }
-
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 1.2rem;
-    }
-
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--accent), #a78bff);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 0 20px var(--accent-glow);
-    }
-
-    .logo-text {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: var(--text);
-    }
-
-    .logo-text span {
-      color: var(--accent);
-    }
-
-    h1 {
-      font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -1px;
-      margin-bottom: 0.8rem;
-    }
-
-    h1 em {
-      font-style: normal;
-      background: linear-gradient(135deg, var(--accent), #c4b5ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 0.95rem;
-      font-weight: 400;
-      font-family: 'DM Mono', monospace;
-    }
-
-    /* Card */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2rem;
-      animation: fadeUp 0.6s ease 0.1s both;
-      box-shadow: 0 4px 40px rgba(0,0,0,0.4);
-    }
-
-    /* Input group */
-    .input-group {
-      display: flex;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .input-wrap {
-      flex: 1;
-      position: relative;
-    }
-
-    .input-wrap::before {
-      content: '🔗';
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 14px;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.85rem;
-      padding: 0.9rem 1rem 0.9rem 2.6rem;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
+    html, body { width: 100%; min-height: 100vh; background: var(--bg); color: var(--green); font-family: var(--font-mono); overflow-x: hidden; }
+    #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.18; pointer-events: none; }
+    body::after { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px); pointer-events: none; z-index: 1; }
+    .page { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; }
+    .container { width: 100%; max-width: 680px; }
+    .header { text-align: center; margin-bottom: 2.5rem; animation: flicker 0.8s ease both; }
+    .terminal-bar { display: flex; align-items: center; gap: 6px; background: #030f03; border: 1px solid var(--muted); border-bottom: none; border-radius: 8px 8px 0 0; padding: 8px 14px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+    .terminal-title { font-size: 0.72rem; color: var(--muted); margin-left: 6px; letter-spacing: 1px; }
+    .logo-wrap { border: 1px solid var(--muted); border-top: none; border-radius: 0 0 8px 8px; padding: 1.8rem 2rem 1.5rem; background: rgba(0,10,0,0.6); backdrop-filter: blur(4px); }
+    .logo { font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 3.5rem); font-weight: 900; letter-spacing: 4px; color: var(--green); text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-glow-strong), 0 0 60px var(--green-glow); animation: pulse-glow 3s ease-in-out infinite; }
+    .logo span { color: #fff; text-shadow: 0 0 10px #fff; }
+    .tagline { font-size: 0.75rem; color: var(--muted); letter-spacing: 3px; margin-top: 0.5rem; text-transform: uppercase; }
+    .cursor-blink { display: inline-block; width: 10px; height: 1.1em; background: var(--green); vertical-align: text-bottom; margin-left: 2px; animation: blink 1s step-end infinite; }
+    .card { background: rgba(0,8,0,0.85); border: 1px solid var(--green-dark); border-radius: 4px; padding: 1.8rem; box-shadow: 0 0 30px rgba(0,255,65,0.05), inset 0 0 40px rgba(0,0,0,0.5); animation: fadeUp 0.6s ease 0.2s both; position: relative; overflow: hidden; }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--green), transparent); animation: scan-line 4s linear infinite; }
+    .prompt-line { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.6rem; letter-spacing: 1px; }
+    .prompt-line span { color: var(--green); }
+    .input-row { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; align-items: stretch; }
+    .input-prefix { color: var(--green); font-size: 1rem; padding: 0.75rem 0; flex-shrink: 0; text-shadow: 0 0 8px var(--green); }
+    input[type="text"] { flex: 1; background: transparent; border: none; border-bottom: 1px solid var(--green-dark); color: var(--green); font-family: var(--font-mono); font-size: 0.9rem; padding: 0.75rem 0.5rem; outline: none; caret-color: var(--green); transition: border-color 0.2s; letter-spacing: 1px; }
     input[type="text"]::placeholder { color: var(--muted); }
-
-    input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-
-    button.check-btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 0.9rem 1.4rem;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
-      box-shadow: 0 0 20px var(--accent-glow);
-    }
-
-    button.check-btn:hover {
-      background: #9080ff;
-      box-shadow: 0 0 30px var(--accent-glow);
-    }
-
-    button.check-btn:active { transform: scale(0.97); }
-
-    button.check-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Loading */
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 2rem 0;
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.85rem;
-    }
-
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 1rem;
-    }
-
-    /* Result */
-    .result {
-      display: none;
-      border-radius: 14px;
-      padding: 1.5rem;
-      border: 1px solid;
-      animation: fadeUp 0.4s ease both;
-    }
-
-    .result.safe {
-      background: rgba(46, 204, 143, 0.06);
-      border-color: rgba(46, 204, 143, 0.3);
-    }
-
-    .result.suspicious {
-      background: rgba(245, 197, 66, 0.06);
-      border-color: rgba(245, 197, 66, 0.3);
-    }
-
-    .result.malicious {
-      background: rgba(255, 94, 108, 0.06);
-      border-color: rgba(255, 94, 108, 0.3);
-    }
-
-    .result-header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.2rem;
-    }
-
-    .result-icon {
-      font-size: 2.2rem;
-      line-height: 1;
-    }
-
-    .result-title {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .result.safe .result-title { color: var(--green); }
-    .result.suspicious .result-title { color: var(--yellow); }
-    .result.malicious .result-title { color: var(--red); }
-
-    .result-score {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    /* Score bar */
-    .score-bar-wrap {
-      margin-bottom: 1.2rem;
-    }
-
-    .score-bar-label {
-      display: flex;
-      justify-content: space-between;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 0.4rem;
-    }
-
-    .score-bar-bg {
-      background: var(--border);
-      border-radius: 99px;
-      height: 6px;
-      overflow: hidden;
-    }
-
-    .score-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
-      width: 0%;
-    }
-
-    .result.safe .score-bar-fill { background: var(--green); }
-    .result.suspicious .score-bar-fill { background: var(--yellow); }
-    .result.malicious .score-bar-fill { background: var(--red); }
-
-    /* Certainty badge */
-    .certainty {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 99px;
-      padding: 0.3rem 0.8rem;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 1.2rem;
-    }
-
-    .certainty-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--muted);
-    }
-
-    .certainty.alta .certainty-dot { background: var(--green); }
-    .certainty.media .certainty-dot { background: var(--yellow); }
-    .certainty.baixa .certainty-dot { background: var(--muted); }
-
-    /* Layers */
-    .layers-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 0.8rem;
-    }
-
-    .layer {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.8rem;
-      padding: 0.7rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.82rem;
-    }
-
+    input[type="text"]:focus { border-bottom-color: var(--green); }
+    button.scan-btn { background: transparent; border: 1px solid var(--green); color: var(--green); font-family: var(--font-display); font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; padding: 0.6rem 1.2rem; cursor: pointer; text-transform: uppercase; transition: all 0.2s; position: relative; overflow: hidden; }
+    button.scan-btn::before { content: ''; position: absolute; inset: 0; background: var(--green); transform: translateX(-100%); transition: transform 0.2s; z-index: -1; }
+    button.scan-btn:hover { color: var(--bg); text-shadow: none; box-shadow: 0 0 20px var(--green-glow-strong); }
+    button.scan-btn:hover::before { transform: translateX(0); }
+    button.scan-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .loading { display: none; padding: 1rem 0; }
+    .loading-text { font-size: 0.8rem; color: var(--green); letter-spacing: 2px; }
+    .loading-text::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+    .progress-bar { margin-top: 0.8rem; height: 2px; background: var(--green-dark); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: progress-anim 2s ease-in-out infinite; }
+    .scan-log { margin-top: 0.8rem; font-size: 0.72rem; color: var(--muted); min-height: 1.2rem; }
+    .result { display: none; animation: fadeUp 0.4s ease both; }
+    .result-divider { border: none; border-top: 1px solid var(--green-dark); margin: 1.2rem 0; }
+    .result-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .verdict-badge { font-family: var(--font-display); font-size: 1.1rem; font-weight: 900; letter-spacing: 3px; padding: 0.4rem 1rem; border: 1px solid; text-transform: uppercase; }
+    .verdict-badge.safe { color: var(--green); border-color: var(--green); box-shadow: 0 0 15px var(--green-glow), inset 0 0 15px var(--green-glow); }
+    .verdict-badge.suspicious { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 15px rgba(240,224,64,0.2), inset 0 0 15px rgba(240,224,64,0.1); }
+    .verdict-badge.malicious { color: var(--red); border-color: var(--red); box-shadow: 0 0 15px rgba(255,34,68,0.3), inset 0 0 15px rgba(255,34,68,0.1); animation: danger-pulse 1s ease-in-out infinite; }
+    .score-display { font-family: var(--font-display); font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; }
+    .score-display strong { font-size: 1.4rem; color: var(--green); text-shadow: 0 0 10px var(--green); }
+    .score-bar-wrap { margin-bottom: 1.2rem; }
+    .score-bar-label { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); letter-spacing: 1px; margin-bottom: 0.3rem; }
+    .score-bar-bg { height: 4px; background: var(--green-dark); overflow: hidden; }
+    .score-bar-fill { height: 100%; width: 0%; transition: width 1.2s cubic-bezier(0.16,1,0.3,1); }
+    .score-bar-fill.safe { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .score-bar-fill.suspicious { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+    .score-bar-fill.malicious { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .layers-header { font-size: 0.65rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 0.8rem; border-bottom: 1px solid var(--green-dark); padding-bottom: 0.4rem; }
+    .layer { display: grid; grid-template-columns: 8px 130px 1fr auto; align-items: start; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(0,60,0,0.3); font-size: 0.78rem; animation: fadeUp 0.3s ease both; }
     .layer:last-child { border-bottom: none; }
-
-    .layer-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-top: 4px;
-      flex-shrink: 0;
-    }
-
-    .layer-dot.ok { background: var(--green); }
-    .layer-dot.warn { background: var(--yellow); }
-    .layer-dot.danger { background: var(--red); }
-
-    .layer-name {
-      font-weight: 700;
-      color: var(--text);
-      min-width: 120px;
-      flex-shrink: 0;
-    }
-
-    .layer-detail {
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.78rem;
-      line-height: 1.5;
-    }
-
-    .layer-pts {
-      margin-left: auto;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--muted);
-      flex-shrink: 0;
-    }
-
-    /* Error */
-    .error-msg {
-      display: none;
-      background: rgba(255,94,108,0.08);
-      border: 1px solid rgba(255,94,108,0.3);
-      border-radius: 12px;
-      padding: 1rem 1.2rem;
-      color: var(--red);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.82rem;
-      animation: fadeUp 0.3s ease both;
-    }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      margin-top: 2rem;
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.75rem;
-      animation: fadeUp 0.6s ease 0.2s both;
-    }
-
-    /* Animations */
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    .layer-indicator { width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; }
+    .layer-indicator.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .layer-indicator.warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .layer-indicator.danger { background: var(--red); box-shadow: 0 0 6px var(--red); animation: danger-pulse 1s ease-in-out infinite; }
+    .layer-name { color: var(--green); font-size: 0.75rem; letter-spacing: 1px; }
+    .layer-detail { color: #3a7a3a; font-size: 0.72rem; line-height: 1.5; word-break: break-word; }
+    .layer-pts { font-family: var(--font-display); font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+    .layer-pts.has-pts { color: var(--red); }
+    .certainty-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.72rem; color: var(--muted); letter-spacing: 1px; }
+    .error-msg { display: none; border: 1px solid var(--red); padding: 0.8rem 1rem; color: var(--red); font-size: 0.78rem; letter-spacing: 1px; animation: fadeUp 0.3s ease both; }
+    .footer { text-align: center; margin-top: 1.5rem; font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; animation: fadeUp 0.6s ease 0.3s both; }
+    .footer a { color: var(--green); text-decoration: none; }
+    .footer a:hover { text-shadow: 0 0 8px var(--green); }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+    @keyframes pulse-glow { 0%,100%{text-shadow:0 0 10px var(--green),0 0 30px var(--green-glow-strong)}50%{text-shadow:0 0 20px var(--green),0 0 60px var(--green-glow-strong),0 0 100px var(--green-glow)} }
+    @keyframes scan-line { 0%{transform:translateX(-100%)}100%{transform:translateX(100%)} }
+    @keyframes flicker { 0%{opacity:0}10%{opacity:0.8}12%{opacity:0.2}14%{opacity:1}100%{opacity:1} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)} }
+    @keyframes dots { 0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}100%{content:''} }
+    @keyframes progress-anim { 0%{width:0%;margin-left:0}50%{width:60%}100%{width:0%;margin-left:100%} }
+    @keyframes danger-pulse { 0%,100%{opacity:1}50%{opacity:0.6} }
   </style>
 </head>
 <body>
+<canvas id="matrix-canvas"></canvas>
+<div class="page">
   <div class="container">
-
     <div class="header">
-      <div class="logo">
-        <div class="logo-icon">🛡</div>
-        <span class="logo-text">Safe<span>Link</span></span>
+      <div class="terminal-bar">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <span class="terminal-title">safelink_v1.0 — threat_analyzer.sh</span>
       </div>
-      <h1>Esse site é<br/><em>seguro?</em></h1>
-      <p class="subtitle">// análise em tempo real por múltiplas camadas</p>
+      <div class="logo-wrap">
+        <div class="logo">SAFE<span>LINK</span><span class="cursor-blink"></span></div>
+        <div class="tagline">// url threat analyzer · by higor santos</div>
+      </div>
     </div>
-
     <div class="card">
-      <div class="input-group">
-        <div class="input-wrap">
-          <input type="text" id="urlInput" placeholder="https://exemplo.com" autocomplete="off" spellcheck="false"/>
-        </div>
-        <button class="check-btn" onclick="checkURL()">Verificar</button>
+      <div class="prompt-line"><span>root@safelink</span>:~$ inserir URL para análise</div>
+      <div class="input-row">
+        <div class="input-prefix">&gt;_</div>
+        <input type="text" id="urlInput" placeholder="https://exemplo.com" autocomplete="off" spellcheck="false"/>
+        <button class="scan-btn" onclick="checkURL()">SCAN</button>
       </div>
-
       <div class="loading" id="loading">
-        <div class="spinner"></div>
-        Analisando URL...
+        <div class="loading-text">ANALISANDO AMEAÇAS</div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="scan-log" id="scanLog">&gt; iniciando verificação...</div>
       </div>
-
       <div class="error-msg" id="errorMsg"></div>
-
       <div class="result" id="result">
+        <hr class="result-divider"/>
         <div class="result-header">
-          <div class="result-icon" id="resultEmoji"></div>
-          <div>
-            <div class="result-title" id="resultVerdict"></div>
-            <div class="result-score" id="resultScore"></div>
-          </div>
+          <div class="verdict-badge" id="verdictBadge"></div>
+          <div class="score-display">SCORE: <strong id="scoreVal">0</strong>/100</div>
         </div>
-
         <div class="score-bar-wrap">
-          <div class="score-bar-label">
-            <span>Nível de risco</span>
-            <span id="scoreLabel"></span>
-          </div>
-          <div class="score-bar-bg">
-            <div class="score-bar-fill" id="scoreBar"></div>
-          </div>
+          <div class="score-bar-label"><span>NÍVEL DE AMEAÇA</span><span id="scoreLabel"></span></div>
+          <div class="score-bar-bg"><div class="score-bar-fill" id="scoreBar"></div></div>
         </div>
-
-        <div class="certainty" id="certaintyBadge">
-          <div class="certainty-dot"></div>
-          <span id="certaintyText"></span>
-        </div>
-
-        <div class="layers-title">Detalhes por camada</div>
+        <div class="certainty-row"><span>&gt;</span><span>CERTEZA DA ANÁLISE:</span><span id="certaintyText" style="color:var(--green)"></span></div>
+        <div class="layers-header">&gt;&gt; RELATÓRIO POR CAMADA</div>
         <div id="layersList"></div>
       </div>
     </div>
-
     <div class="footer">
-      powered by VirusTotal · Google Safe Browsing · WHOIS · SSL
+      powered by VIRUSTOTAL · GOOGLE SAFE BROWSING · WHOIS · SSL/TLS<br/><br/>
+      built by <a href="https://www.linkedin.com/in/" target="_blank">Higor Santos</a> · 2025
     </div>
-
   </div>
-
-  <script>
-    const urlInput = document.getElementById('urlInput');
-    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkURL(); });
-
-    const LAYER_NAMES = {
-      blacklist_virustotal: 'VirusTotal',
-      blacklist_google: 'Google SB',
-      heuristics: 'Heurística',
-      whois: 'WHOIS',
-      ssl: 'SSL / HTTPS'
-    };
-
-    function show(el) { el.style.display = 'block'; }
-    function hide(el) { el.style.display = 'none'; }
-
-    async function checkURL() {
-      const url = urlInput.value.trim();
-      if (!url) { urlInput.focus(); return; }
-
-      const loading  = document.getElementById('loading');
-      const result   = document.getElementById('result');
-      const errorMsg = document.getElementById('errorMsg');
-      const btn      = document.querySelector('.check-btn');
-
-      hide(result); hide(errorMsg);
-      show(loading);
-      btn.disabled = true;
-
-      try {
-        const res = await fetch('https://safelink-api-production.up.railway.app', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
-        });
-
-        if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
-        const data = await res.json();
-
-        hide(loading);
-        renderResult(data);
-
-      } catch (err) {
-        hide(loading);
-        errorMsg.textContent = `⚠ Não foi possível conectar à API. Verifique se ela está rodando em localhost:8000`;
-        show(errorMsg);
-      } finally {
-        btn.disabled = false;
-      }
+</div>
+<script>
+  const canvas = document.getElementById('matrix-canvas');
+  const ctx = canvas.getContext('2d');
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF<>{}[]|/\\';
+  const fontSize = 14;
+  let drops = Array(Math.floor(canvas.width / fontSize)).fill(1);
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(1,10,1,0.05)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.font = fontSize + 'px Share Tech Mono';
+    for (let i = 0; i < drops.length; i++) {
+      const char = chars[Math.floor(Math.random()*chars.length)];
+      const b = Math.random();
+      ctx.fillStyle = b > 0.95 ? '#ffffff' : b > 0.7 ? '#00ff41' : '#003a10';
+      ctx.fillText(char, i*fontSize, drops[i]*fontSize);
+      if (drops[i]*fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
     }
+  }
+  setInterval(drawMatrix, 50);
 
-    function renderResult(data) {
-      const result = document.getElementById('result');
-      const verdict = data.verdict.toLowerCase();
-      const classMap = { 'seguro': 'safe', 'suspeito': 'suspicious', 'malicioso': 'malicious' };
-      const cls = classMap[verdict] || 'suspicious';
+  const scanMessages = ['> verificando blacklists...','> consultando VirusTotal...','> checando Google Safe Browsing...','> analisando padrões da URL...','> verificando WHOIS...','> validando certificado SSL...','> calculando score de ameaça...'];
+  let logIndex = 0, logInterval = null;
+  function startScanLog() {
+    logIndex = 0; document.getElementById('scanLog').textContent = scanMessages[0];
+    logInterval = setInterval(() => { logIndex = (logIndex+1)%scanMessages.length; document.getElementById('scanLog').textContent = scanMessages[logIndex]; }, 600);
+  }
+  function stopScanLog() { clearInterval(logInterval); }
 
-      result.className = `result ${cls}`;
+  const LAYER_NAMES = { blacklist_virustotal:'VIRUSTOTAL', blacklist_google:'GOOGLE SB', heuristics:'HEURÍSTICA', whois:'WHOIS', ssl:'SSL/TLS' };
 
-      document.getElementById('resultEmoji').textContent = data.emoji;
-      document.getElementById('resultVerdict').textContent = data.verdict;
-      document.getElementById('resultScore').textContent = `Score: ${data.score}/100`;
-      document.getElementById('scoreLabel').textContent = `${data.score}/100`;
+  document.getElementById('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') checkURL(); });
 
-      // Animate score bar
-      const bar = document.getElementById('scoreBar');
-      bar.style.width = '0%';
-      setTimeout(() => { bar.style.width = data.score + '%'; }, 50);
+  async function checkURL() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) { document.getElementById('urlInput').focus(); return; }
+    const loading=document.getElementById('loading'), result=document.getElementById('result'), errorMsg=document.getElementById('errorMsg'), btn=document.querySelector('.scan-btn');
+    result.style.display='none'; errorMsg.style.display='none'; loading.style.display='block'; btn.disabled=true; startScanLog();
+    try {
+      const res = await fetch('https://safelink-api-production.up.railway.app/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      stopScanLog(); loading.style.display='none'; renderResult(data);
+    } catch(err) {
+      stopScanLog(); loading.style.display='none';
+      errorMsg.textContent='> ERRO: não foi possível conectar à API.'; errorMsg.style.display='block';
+    } finally { btn.disabled=false; }
+  }
 
-      // Certainty badge
-      const badge = document.getElementById('certaintyBadge');
-      const certMap = { 'ALTA': 'alta', 'MÉDIA': 'media', 'BAIXA': 'baixa' };
-      badge.className = `certainty ${certMap[data.certainty] || ''}`;
-      document.getElementById('certaintyText').textContent = `Certeza ${data.certainty}`;
-
-      // Layers
-      const layersList = document.getElementById('layersList');
-      layersList.innerHTML = '';
-
-      for (const [key, layer] of Object.entries(data.layers)) {
-        const dotClass = layer.score === 0 ? 'ok' : layer.score <= 15 ? 'warn' : 'danger';
-        const detail = Array.isArray(layer.detail) ? layer.detail.join(' · ') : layer.detail;
-
-        layersList.innerHTML += `
-          <div class="layer">
-            <div class="layer-dot ${dotClass}"></div>
-            <div class="layer-name">${LAYER_NAMES[key] || key}</div>
-            <div class="layer-detail">${detail}</div>
-            <div class="layer-pts">${layer.score > 0 ? '+' + layer.score : '—'}</div>
-          </div>`;
-      }
-
-      show(result);
+  function renderResult(data) {
+    const verdict = data.verdict.toLowerCase();
+    const classMap = {'seguro':'safe','suspeito':'suspicious','malicioso':'malicious'};
+    const cls = classMap[verdict]||'suspicious';
+    const badge = document.getElementById('verdictBadge');
+    badge.textContent = data.emoji+' '+data.verdict; badge.className='verdict-badge '+cls;
+    document.getElementById('scoreVal').textContent = data.score;
+    document.getElementById('scoreLabel').textContent = data.score+'/100';
+    const bar = document.getElementById('scoreBar');
+    bar.className='score-bar-fill '+cls; bar.style.width='0%';
+    setTimeout(()=>{ bar.style.width=data.score+'%'; },50);
+    document.getElementById('certaintyText').textContent = data.certainty;
+    const list = document.getElementById('layersList'); list.innerHTML=''; let delay=0;
+    for (const [key, layer] of Object.entries(data.layers)) {
+      const dotClass = layer.score===0?'ok':layer.score<=15?'warn':'danger';
+      const detail = Array.isArray(layer.detail)?layer.detail.join(' | '):layer.detail;
+      const div = document.createElement('div'); div.className='layer'; div.style.animationDelay=delay+'ms';
+      div.innerHTML=`<div class="layer-indicator ${dotClass}"></div><div class="layer-name">${LAYER_NAMES[key]||key}</div><div class="layer-detail">${detail}</div><div class="layer-pts ${layer.score>0?'has-pts':''}">${layer.score>0?'+'+layer.score:'—'}</div>`;
+      list.appendChild(div); delay+=80;
     }
-  </script>
+    document.getElementById('result').style.display='block';
+  }
+</script>
 </body>
 </html>
