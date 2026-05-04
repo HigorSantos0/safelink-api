@@ -8,12 +8,10 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #010a01; --green: #00ff41; --green-dim: #00c032;
-      --green-dark: #003a10; --green-glow: rgba(0,255,65,0.15);
-      --green-glow-strong: rgba(0,255,65,0.35); --red: #ff2244;
-      --yellow: #f0e040; --text: #ccffcc; --muted: #2a6b2a;
-      --border: #0a3a0a; --font-mono: 'Share Tech Mono', monospace;
-      --font-display: 'Orbitron', monospace;
+      --bg: #010a01; --green: #00ff41; --green-dark: #003a10;
+      --green-glow: rgba(0,255,65,0.15); --green-glow-strong: rgba(0,255,65,0.35);
+      --red: #ff2244; --yellow: #f0e040; --muted: #2a6b2a;
+      --font-mono: 'Share Tech Mono', monospace; --font-display: 'Orbitron', monospace;
     }
     html, body { width: 100%; min-height: 100vh; background: var(--bg); color: var(--green); font-family: var(--font-mono); overflow-x: hidden; }
     #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.18; pointer-events: none; }
@@ -26,7 +24,7 @@
     .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
     .terminal-title { font-size: 0.72rem; color: var(--muted); margin-left: 6px; letter-spacing: 1px; }
     .logo-wrap { border: 1px solid var(--muted); border-top: none; border-radius: 0 0 8px 8px; padding: 1.8rem 2rem 1.5rem; background: rgba(0,10,0,0.6); backdrop-filter: blur(4px); }
-    .logo { font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 3.5rem); font-weight: 900; letter-spacing: 4px; color: var(--green); text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-glow-strong), 0 0 60px var(--green-glow); animation: pulse-glow 3s ease-in-out infinite; }
+    .logo { font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 3.5rem); font-weight: 900; letter-spacing: 4px; color: var(--green); text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-glow-strong); animation: pulse-glow 3s ease-in-out infinite; }
     .logo span { color: #fff; text-shadow: 0 0 10px #fff; }
     .tagline { font-size: 0.75rem; color: var(--muted); letter-spacing: 3px; margin-top: 0.5rem; text-transform: uppercase; }
     .cursor-blink { display: inline-block; width: 10px; height: 1.1em; background: var(--green); vertical-align: text-bottom; margin-left: 2px; animation: blink 1s step-end infinite; }
@@ -47,7 +45,7 @@
     .loading { display: none; padding: 1rem 0; }
     .loading-text { font-size: 0.8rem; color: var(--green); letter-spacing: 2px; }
     .loading-text::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
-    .progress-bar { margin-top: 0.8rem; height: 2px; background: var(--green-dark); border-radius: 2px; overflow: hidden; }
+    .progress-bar { margin-top: 0.8rem; height: 2px; background: var(--green-dark); overflow: hidden; }
     .progress-fill { height: 100%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: progress-anim 2s ease-in-out infinite; }
     .scan-log { margin-top: 0.8rem; font-size: 0.72rem; color: var(--muted); min-height: 1.2rem; }
     .result { display: none; animation: fadeUp 0.4s ease both; }
@@ -55,8 +53,8 @@
     .result-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
     .verdict-badge { font-family: var(--font-display); font-size: 1.1rem; font-weight: 900; letter-spacing: 3px; padding: 0.4rem 1rem; border: 1px solid; text-transform: uppercase; }
     .verdict-badge.safe { color: var(--green); border-color: var(--green); box-shadow: 0 0 15px var(--green-glow), inset 0 0 15px var(--green-glow); }
-    .verdict-badge.suspicious { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 15px rgba(240,224,64,0.2), inset 0 0 15px rgba(240,224,64,0.1); }
-    .verdict-badge.malicious { color: var(--red); border-color: var(--red); box-shadow: 0 0 15px rgba(255,34,68,0.3), inset 0 0 15px rgba(255,34,68,0.1); animation: danger-pulse 1s ease-in-out infinite; }
+    .verdict-badge.suspicious { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 15px rgba(240,224,64,0.2); }
+    .verdict-badge.malicious { color: var(--red); border-color: var(--red); box-shadow: 0 0 15px rgba(255,34,68,0.3); animation: danger-pulse 1s ease-in-out infinite; }
     .score-display { font-family: var(--font-display); font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; }
     .score-display strong { font-size: 1.4rem; color: var(--green); text-shadow: 0 0 10px var(--green); }
     .score-bar-wrap { margin-bottom: 1.2rem; }
@@ -66,6 +64,7 @@
     .score-bar-fill.safe { background: var(--green); box-shadow: 0 0 8px var(--green); }
     .score-bar-fill.suspicious { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
     .score-bar-fill.malicious { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .context-msg { font-size: 0.78rem; letter-spacing: 1px; margin-bottom: 1rem; padding: 0.5rem 0; }
     .layers-header { font-size: 0.65rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 0.8rem; border-bottom: 1px solid var(--green-dark); padding-bottom: 0.4rem; }
     .layer { display: grid; grid-template-columns: 8px 130px 1fr auto; align-items: start; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(0,60,0,0.3); font-size: 0.78rem; animation: fadeUp 0.3s ease both; }
     .layer:last-child { border-bottom: none; }
@@ -77,8 +76,7 @@
     .layer-detail { color: #3a7a3a; font-size: 0.72rem; line-height: 1.5; word-break: break-word; }
     .layer-pts { font-family: var(--font-display); font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
     .layer-pts.has-pts { color: var(--red); }
-    .certainty-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.72rem; color: var(--muted); letter-spacing: 1px; }
-    .error-msg { display: none; border: 1px solid var(--red); padding: 0.8rem 1rem; color: var(--red); font-size: 0.78rem; letter-spacing: 1px; animation: fadeUp 0.3s ease both; }
+    .error-msg { display: none; border: 1px solid var(--red); padding: 0.8rem 1rem; color: var(--red); font-size: 0.78rem; letter-spacing: 1px; }
     .footer { text-align: center; margin-top: 1.5rem; font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; animation: fadeUp 0.6s ease 0.3s both; }
     .footer a { color: var(--green); text-decoration: none; }
     .footer a:hover { text-shadow: 0 0 8px var(--green); }
@@ -129,7 +127,7 @@
           <div class="score-bar-label"><span>NÍVEL DE AMEAÇA</span><span id="scoreLabel"></span></div>
           <div class="score-bar-bg"><div class="score-bar-fill" id="scoreBar"></div></div>
         </div>
-        <div class="certainty-row"><span>&gt;</span><span>CERTEZA DA ANÁLISE:</span><span id="certaintyText" style="color:var(--green)"></span></div>
+        <div class="context-msg" id="contextMsg"></div>
         <div class="layers-header">&gt;&gt; RELATÓRIO POR CAMADA</div>
         <div id="layersList"></div>
       </div>
@@ -162,7 +160,12 @@
   }
   setInterval(drawMatrix, 50);
 
-  const scanMessages = ['> verificando blacklists...','> consultando VirusTotal...','> checando Google Safe Browsing...','> analisando padrões da URL...','> verificando WHOIS...','> validando certificado SSL...','> calculando score de ameaça...'];
+  const scanMessages = [
+    '> verificando blacklists...', '> consultando VirusTotal...',
+    '> checando Google Safe Browsing...', '> analisando padrões da URL...',
+    '> verificando WHOIS...', '> validando certificado SSL...',
+    '> calculando score de ameaça...'
+  ];
   let logIndex = 0, logInterval = null;
   function startScanLog() {
     logIndex = 0; document.getElementById('scanLog').textContent = scanMessages[0];
@@ -177,40 +180,78 @@
   async function checkURL() {
     const url = document.getElementById('urlInput').value.trim();
     if (!url) { document.getElementById('urlInput').focus(); return; }
-    const loading=document.getElementById('loading'), result=document.getElementById('result'), errorMsg=document.getElementById('errorMsg'), btn=document.querySelector('.scan-btn');
-    result.style.display='none'; errorMsg.style.display='none'; loading.style.display='block'; btn.disabled=true; startScanLog();
+    const loading=document.getElementById('loading'), result=document.getElementById('result'),
+          errorMsg=document.getElementById('errorMsg'), btn=document.querySelector('.scan-btn');
+    result.style.display='none'; errorMsg.style.display='none';
+    loading.style.display='block'; btn.disabled=true; startScanLog();
     try {
-      const res = await fetch('https://safelink-api-production.up.railway.app/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url}) });
+      const res = await fetch('https://safelink-api-production.up.railway.app/analyze', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})
+      });
       if (!res.ok) throw new Error();
       const data = await res.json();
       stopScanLog(); loading.style.display='none'; renderResult(data);
     } catch(err) {
       stopScanLog(); loading.style.display='none';
-      errorMsg.textContent='> ERRO: não foi possível conectar à API.'; errorMsg.style.display='block';
+      errorMsg.textContent='> ERRO: não foi possível conectar à API.';
+      errorMsg.style.display='block';
     } finally { btn.disabled=false; }
   }
 
   function renderResult(data) {
     const verdict = data.verdict.toLowerCase();
     const classMap = {'seguro':'safe','suspeito':'suspicious','malicioso':'malicious'};
-    const cls = classMap[verdict]||'suspicious';
+    const cls = classMap[verdict] || 'suspicious';
+
+    // Badge e score
     const badge = document.getElementById('verdictBadge');
-    badge.textContent = data.emoji+' '+data.verdict; badge.className='verdict-badge '+cls;
+    badge.textContent = data.emoji + ' ' + data.verdict;
+    badge.className = 'verdict-badge ' + cls;
     document.getElementById('scoreVal').textContent = data.score;
-    document.getElementById('scoreLabel').textContent = data.score+'/100';
+    document.getElementById('scoreLabel').textContent = data.score + '/100';
+
+    // Barra de score
     const bar = document.getElementById('scoreBar');
-    bar.className='score-bar-fill '+cls; bar.style.width='0%';
-    setTimeout(()=>{ bar.style.width=data.score+'%'; },50);
-    document.getElementById('certaintyText').textContent = data.certainty;
-    const list = document.getElementById('layersList'); list.innerHTML=''; let delay=0;
-    for (const [key, layer] of Object.entries(data.layers)) {
-      const dotClass = layer.score===0?'ok':layer.score<=15?'warn':'danger';
-      const detail = Array.isArray(layer.detail)?layer.detail.join(' | '):layer.detail;
-      const div = document.createElement('div'); div.className='layer'; div.style.animationDelay=delay+'ms';
-      div.innerHTML=`<div class="layer-indicator ${dotClass}"></div><div class="layer-name">${LAYER_NAMES[key]||key}</div><div class="layer-detail">${detail}</div><div class="layer-pts ${layer.score>0?'has-pts':''}">${layer.score>0?'+'+layer.score:'—'}</div>`;
-      list.appendChild(div); delay+=80;
+    bar.className = 'score-bar-fill ' + cls;
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = data.score + '%'; }, 50);
+
+    // Mensagem contextual
+    const layers = Object.values(data.layers);
+    const triggered = layers.filter(l => l.score > 0).length;
+    const total = layers.length;
+    const ctxEl = document.getElementById('contextMsg');
+
+    if (triggered === 0) {
+      ctxEl.textContent = '> Nenhuma ameaça detectada em ' + total + ' camadas de análise';
+      ctxEl.style.color = 'var(--green)';
+    } else if (triggered <= 2) {
+      ctxEl.textContent = '> Ameaça detectada em ' + triggered + ' de ' + total + ' camadas — tome cuidado';
+      ctxEl.style.color = 'var(--yellow)';
+    } else {
+      ctxEl.textContent = '> Ameaça crítica confirmada em ' + triggered + ' de ' + total + ' camadas';
+      ctxEl.style.color = 'var(--red)';
     }
-    document.getElementById('result').style.display='block';
+
+    // Camadas
+    const list = document.getElementById('layersList');
+    list.innerHTML = '';
+    let delay = 0;
+    for (const [key, layer] of Object.entries(data.layers)) {
+      const dotClass = layer.score === 0 ? 'ok' : layer.score <= 15 ? 'warn' : 'danger';
+      const detail = Array.isArray(layer.detail) ? layer.detail.join(' | ') : layer.detail;
+      const div = document.createElement('div');
+      div.className = 'layer'; div.style.animationDelay = delay + 'ms';
+      div.innerHTML = `
+        <div class="layer-indicator ${dotClass}"></div>
+        <div class="layer-name">${LAYER_NAMES[key] || key}</div>
+        <div class="layer-detail">${detail}</div>
+        <div class="layer-pts ${layer.score > 0 ? 'has-pts' : ''}">${layer.score > 0 ? '+' + layer.score : '—'}</div>
+      `;
+      list.appendChild(div);
+      delay += 80;
+    }
+    document.getElementById('result').style.display = 'block';
   }
 </script>
 </body>
