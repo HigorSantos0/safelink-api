@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SafeLink — Verificador de URLs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --text: #e8e8f0;
+      --muted: #5a5a7a;
+      --accent: #7c6aff;
+      --accent-glow: rgba(124, 106, 255, 0.25);
+      --green: #2ecc8f;
+      --green-glow: rgba(46, 204, 143, 0.2);
+      --yellow: #f5c542;
+      --yellow-glow: rgba(245, 197, 66, 0.2);
+      --red: #ff5e6c;
+      --red-glow: rgba(255, 94, 108, 0.2);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blob */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(124,106,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), #a78bff);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      margin-bottom: 0.8rem;
+    }
+
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent), #c4b5ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 400;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem;
+      animation: fadeUp 0.6s ease 0.1s both;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.4);
+    }
+
+    /* Input group */
+    .input-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .input-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .input-wrap::before {
+      content: '🔗';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 0.9rem 1rem 0.9rem 2.6rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    button.check-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 0.9rem 1.4rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    button.check-btn:hover {
+      background: #9080ff;
+      box-shadow: 0 0 30px var(--accent-glow);
+    }
+
+    button.check-btn:active { transform: scale(0.97); }
+
+    button.check-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Loading */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    /* Result */
+    .result {
+      display: none;
+      border-radius: 14px;
+      padding: 1.5rem;
+      border: 1px solid;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .result.safe {
+      background: rgba(46, 204, 143, 0.06);
+      border-color: rgba(46, 204, 143, 0.3);
+    }
+
+    .result.suspicious {
+      background: rgba(245, 197, 66, 0.06);
+      border-color: rgba(245, 197, 66, 0.3);
+    }
+
+    .result.malicious {
+      background: rgba(255, 94, 108, 0.06);
+      border-color: rgba(255, 94, 108, 0.3);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .result-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .result-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .result.safe .result-title { color: var(--green); }
+    .result.suspicious .result-title { color: var(--yellow); }
+    .result.malicious .result-title { color: var(--red); }
+
+    .result-score {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Score bar */
+    .score-bar-wrap {
+      margin-bottom: 1.2rem;
+    }
+
+    .score-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .score-bar-bg {
+      background: var(--border);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0%;
+    }
+
+    .result.safe .score-bar-fill { background: var(--green); }
+    .result.suspicious .score-bar-fill { background: var(--yellow); }
+    .result.malicious .score-bar-fill { background: var(--red); }
+
+    /* Certainty badge */
+    .certainty {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.3rem 0.8rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+    }
+
+    .certainty-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .certainty.alta .certainty-dot { background: var(--green); }
+    .certainty.media .certainty-dot { background: var(--yellow); }
+    .certainty.baixa .certainty-dot { background: var(--muted); }
+
+    /* Layers */
+    .layers-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+
+    .layer {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+
+    .layer:last-child { border-bottom: none; }
+
+    .layer-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .layer-dot.ok { background: var(--green); }
+    .layer-dot.warn { background: var(--yellow); }
+    .layer-dot.danger { background: var(--red); }
+
+    .layer-name {
+      font-weight: 700;
+      color: var(--text);
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .layer-detail {
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .layer-pts {
+      margin-left: auto;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      background: rgba(255,94,108,0.08);
+      border: 1px solid rgba(255,94,108,0.3);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      color: var(--red);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">🛡</div>
+        <span class="logo-text">Safe<span>Link</span></span>
+      </div>
+      <h1>Esse site é<br/><em>seguro?</em></h1>
+      <p class="subtitle">// análise em tempo real por múltiplas camadas</p>
+    </div>
+
+    <div class="card">
+      <div class="input-group">
+        <div class="input-wrap">
+          <input type="text" id="urlInput" placeholder="https://exemplo.com" autocomplete="off" spellcheck="false"/>
+        </div>
+        <button class="check-btn" onclick="checkURL()">Verificar</button>
+      </div>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        Analisando URL...
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="result" id="result">
+        <div class="result-header">
+          <div class="result-icon" id="resultEmoji"></div>
+          <div>
+            <div class="result-title" id="resultVerdict"></div>
+            <div class="result-score" id="resultScore"></div>
+          </div>
+        </div>
+
+        <div class="score-bar-wrap">
+          <div class="score-bar-label">
+            <span>Nível de risco</span>
+            <span id="scoreLabel"></span>
+          </div>
+          <div class="score-bar-bg">
+            <div class="score-bar-fill" id="scoreBar"></div>
+          </div>
+        </div>
+
+        <div class="certainty" id="certaintyBadge">
+          <div class="certainty-dot"></div>
+          <span id="certaintyText"></span>
+        </div>
+
+        <div class="layers-title">Detalhes por camada</div>
+        <div id="layersList"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      powered by VirusTotal · Google Safe Browsing · WHOIS · SSL
+    </div>
+
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('urlInput');
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkURL(); });
+
+    const LAYER_NAMES = {
+      blacklist_virustotal: 'VirusTotal',
+      blacklist_google: 'Google SB',
+      heuristics: 'Heurística',
+      whois: 'WHOIS',
+      ssl: 'SSL / HTTPS'
+    };
+
+    function show(el) { el.style.display = 'block'; }
+    function hide(el) { el.style.display = 'none'; }
+
+    async function checkURL() {
+      const url = urlInput.value.trim();
+      if (!url) { urlInput.focus(); return; }
+
+      const loading  = document.getElementById('loading');
+      const result   = document.getElementById('result');
+      const errorMsg = document.getElementById('errorMsg');
+      const btn      = document.querySelector('.check-btn');
+
+      hide(result); hide(errorMsg);
+      show(loading);
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('http://localhost:8000/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+        const data = await res.json();
+
+        hide(loading);
+        renderResult(data);
+
+      } catch (err) {
+        hide(loading);
+        errorMsg.textContent = `⚠ Não foi possível conectar à API. Verifique se ela está rodando em localhost:8000`;
+        show(errorMsg);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function renderResult(data) {
+      const result = document.getElementById('result');
+      const verdict = data.verdict.toLowerCase();
+      const classMap = { 'seguro': 'safe', 'suspeito': 'suspicious', 'malicioso': 'malicious' };
+      const cls = classMap[verdict] || 'suspicious';
+
+      result.className = `result ${cls}`;
+
+      document.getElementById('resultEmoji').textContent = data.emoji;
+      document.getElementById('resultVerdict').textContent = data.verdict;
+      document.getElementById('resultScore').textContent = `Score: ${data.score}/100`;
+      document.getElementById('scoreLabel').textContent = `${data.score}/100`;
+
+      // Animate score bar
+      const bar = document.getElementById('scoreBar');
+      bar.style.width = '0%';
+      setTimeout(() => { bar.style.width = data.score + '%'; }, 50);
+
+      // Certainty badge
+      const badge = document.getElementById('certaintyBadge');
+      const certMap = { 'ALTA': 'alta', 'MÉDIA': 'media', 'BAIXA': 'baixa' };
+      badge.className = `certainty ${certMap[data.certainty] || ''}`;
+      document.getElementById('certaintyText').textContent = `Certeza ${data.certainty}`;
+
+      // Layers
+      const layersList = document.getElementById('layersList');
+      layersList.innerHTML = '';
+
+      for (const [key, layer] of Object.entries(data.layers)) {
+        const dotClass = layer.score === 0 ? 'ok' : layer.score <= 15 ? 'warn' : 'danger';
+        const detail = Array.isArray(layer.detail) ? layer.detail.join(' · ') : layer.detail;
+
+        layersList.innerHTML += `
+          <div class="layer">
+            <div class="layer-dot ${dotClass}"></div>
+            <div class="layer-name">${LAYER_NAMES[key] || key}</div>
+            <div class="layer-detail">${detail}</div>
+            <div class="layer-pts">${layer.score > 0 ? '+' + layer.score : '—'}</div>
+          </div>`;
+      }
+
+      show(result);
+    }
+  </script>
+</body>
+</html>
