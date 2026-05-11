@@ -41,6 +41,12 @@ LEGITIMATE_DOMAINS = [
     "twitter.com", "linkedin.com", "youtube.com", "tiktok.com"
 ]
 
+# Plataformas de hospedagem gratuita (mais suspeitas)
+FREE_HOSTING_PLATFORMS = [
+    "wixsite.com", "wixstudio.com", "wordpress.com", "blogspot.com",
+    "000webhostapp.com", "weebly.com", "github.io", "netlify.app"
+]
+
 
 # ─────────────────────────────────────────
 # CAMADA 1 — BLACKLISTS (peso máx: 40 pts)
@@ -68,7 +74,7 @@ def check_virustotal(url: str) -> dict:
         else:
             return {"score": 40, "detail": f"VirusTotal: {malicious} engines — alto risco"}
     except Exception as e:
-        return {"score": 0, "detail": f"VirusTotal: erro ao consultar ({str(e)})"}
+        return {"score": 0, "detail": f"VirusTotal: erro ao consultar"}
 
 
 def check_google_safe_browsing(url: str) -> dict:
@@ -93,7 +99,35 @@ def check_google_safe_browsing(url: str) -> dict:
             return {"score": 40, "detail": f"Google Safe Browsing: detectou {threat}"}
         return {"score": 0, "detail": "Google Safe Browsing: URL limpa"}
     except Exception as e:
-        return {"score": 0, "detail": f"Google Safe Browsing: erro ao consultar ({str(e)})"}
+        return {"score": 0, "detail": f"Google Safe Browsing: erro ao consultar"}
+
+
+def check_phishtank(url: str) -> dict:
+    """PhishTank - API pública sem necessidade de chave"""
+    try:
+        import requests
+        # PhishTank permite consulta via GET público
+        response = requests.post(
+            "http://checkurl.phishtank.com/checkurl/",
+            data={"url": url, "format": "json"},
+            timeout=5
+        )
+        
+        if response.status_code != 200:
+            return {"score": 0, "detail": "PhishTank: indisponível"}
+        
+        data = response.json()
+        results = data.get("results", {})
+        
+        if results.get("in_database"):
+            if results.get("valid"):
+                return {"score": 40, "detail": "PhishTank: URL confirmada como phishing ativo"}
+            else:
+                return {"score": 20, "detail": "PhishTank: URL listada mas reportada como inativa"}
+        
+        return {"score": 0, "detail": "PhishTank: URL não encontrada na base"}
+    except Exception as e:
+        return {"score": 0, "detail": f"PhishTank: erro ao consultar"}
 
 
 # ─────────────────────────────────────────
@@ -112,7 +146,14 @@ def check_heuristics(url: str) -> dict:
         score += 15
         details.append("IP usado como domínio (+15)")
 
-    # 2. Typosquatting — varre a URL INTEIRA (não só o domínio registrado)
+    # 2. Hospedagem gratuita
+    for platform in FREE_HOSTING_PLATFORMS:
+        if platform in domain:
+            score += 6
+            details.append(f"Hospedado em plataforma gratuita: {platform} (+6)")
+            break
+
+    # 3. Typosquatting
     for brand in KNOWN_BRANDS:
         is_legitimate = any(domain == legit or domain.endswith("." + legit) for legit in LEGITIMATE_DOMAINS)
         if brand in full_url and not is_legitimate:
@@ -120,14 +161,14 @@ def check_heuristics(url: str) -> dict:
             details.append(f"Possível typosquatting de '{brand}' (+10)")
             break
 
-    # 3. TLD suspeito
+    # 4. TLD suspeito
     for tld in SUSPICIOUS_TLDS:
         if domain.endswith(tld):
             score += 8
             details.append(f"TLD suspeito '{tld}' (+8)")
             break
 
-    # 4. Múltiplas palavras suspeitas (conta até 2)
+    # 5. Múltiplas palavras suspeitas
     found_keywords = [kw for kw in SUSPICIOUS_KEYWORDS if kw in full_url]
     if len(found_keywords) >= 2:
         score += 8
@@ -136,23 +177,23 @@ def check_heuristics(url: str) -> dict:
         score += 4
         details.append(f"Palavra suspeita: '{found_keywords[0]}' (+4)")
 
-    # 5. Excesso de subdomínios (domínio disfarçado como subdomínio)
+    # 6. Excesso de subdomínios
     parts = domain.split(".")
     if len(parts) > 3:
         score += 6
         details.append(f"Domínio com {len(parts)} níveis — estrutura suspeita (+6)")
 
-    # 6. URL muito longa
+    # 7. URL muito longa
     if len(url) > 100:
         score += 3
         details.append(f"URL muito longa: {len(url)} caracteres (+3)")
 
-    # 7. Símbolo @ no domínio (técnica de spoofing)
+    # 8. Símbolo @ no domínio
     if "@" in domain:
         score += 8
         details.append("Símbolo @ no domínio — técnica de spoofing (+8)")
 
-    # 8. Hífens excessivos
+    # 9. Hífens excessivos
     if domain.count("-") >= 3:
         score += 3
         details.append(f"Excesso de hífens no domínio (+3)")
@@ -180,7 +221,6 @@ def check_whois(url: str) -> dict:
         if not creation_date:
             return {"score": 5, "detail": "WHOIS: data de criação indisponível (leve suspeita)"}
 
-        # Remove timezone se presente
         if hasattr(creation_date, 'tzinfo') and creation_date.tzinfo is not None:
             creation_date = creation_date.replace(tzinfo=None)
 
@@ -194,7 +234,7 @@ def check_whois(url: str) -> dict:
         else:
             return {"score": 0, "detail": f"WHOIS: domínio com {age_days} dias — estabelecido"}
     except Exception as e:
-        return {"score": 0, "detail": f"WHOIS: não foi possível verificar ({str(e)})"}
+        return {"score": 0, "detail": f"WHOIS: não foi possível verificar"}
 
 
 # ─────────────────────────────────────────
@@ -221,7 +261,7 @@ def check_ssl(url: str) -> dict:
     except ssl.SSLCertVerificationError:
         return {"score": 8, "detail": "SSL: certificado inválido ou autoassinado (+8)"}
     except Exception as e:
-        return {"score": 5, "detail": f"SSL: não foi possível verificar ({str(e)})"}
+        return {"score": 5, "detail": f"SSL: não foi possível verificar"}
 
 
 # ─────────────────────────────────────────
@@ -237,28 +277,30 @@ def get_verdict(score: int) -> dict:
 
 
 def get_certainty(layers_triggered: int) -> str:
-    if layers_triggered >= 3:
+    if layers_triggered >= 4:
         return "ALTA"
-    elif layers_triggered == 2:
+    elif layers_triggered >= 2:
         return "MÉDIA"
     else:
         return "BAIXA"
 
 
 def analyze_url(url: str) -> dict:
+    # 6 camadas
     virustotal   = check_virustotal(url)
     google       = check_google_safe_browsing(url)
+    phishtank    = check_phishtank(url)
     heuristics   = check_heuristics(url)
     whois_result = check_whois(url)
     ssl_result   = check_ssl(url)
 
     total_score = min(
-        virustotal["score"] + google["score"] + heuristics["score"] +
-        whois_result["score"] + ssl_result["score"], 100
+        virustotal["score"] + google["score"] + phishtank["score"] +
+        heuristics["score"] + whois_result["score"] + ssl_result["score"], 100
     )
 
     layers_triggered = sum(
-        1 for layer in [virustotal, google, heuristics, whois_result, ssl_result]
+        1 for layer in [virustotal, google, phishtank, heuristics, whois_result, ssl_result]
         if layer["score"] > 0
     )
 
@@ -274,6 +316,7 @@ def analyze_url(url: str) -> dict:
         "layers": {
             "blacklist_virustotal": virustotal,
             "blacklist_google":     google,
+            "blacklist_phishtank":  phishtank,
             "heuristics":           heuristics,
             "whois":                whois_result,
             "ssl":                  ssl_result
